@@ -120,7 +120,6 @@ def generate_valid_guess_from_available_ones(available_guesses):
     while True:
         guess = {}
         for character_index, available_characters in available_guesses.items():
-            # print(type(available_characters))
             if type(available_characters) == list:
                 random_char = np.random.choice(available_characters, 1)[0]
             else:
@@ -140,22 +139,40 @@ def naive_guesser(target: str, initial_guess: str = None) -> str | None:
     # Make a random initial guess.
     initial_guess = initial_guess or "46*6=276"
     nerdle.make_guess(initial_guess)
-    for guessing_round in tqdm(range(1, 5)):
+    for guessing_round in range(1, 5):
         state_history = nerdle.board[:guessing_round, :]
         guess_history = nerdle.guesses
         available_guesses = get_available_guesses(state_history, guess_history)
         # From the available guesses, generate a guess
         guess = generate_valid_guess_from_available_ones(available_guesses)
         nerdle.make_guess(guess)
-        print(f"Guess {guessing_round + 1}: {guess}")
-
         if nerdle.victory_condition():
-            print(f"FINISHED IN: {guessing_round} guesses. The answer was {guess}")
-            return guess
+            return guessing_round + 1
 
-    return None
+    return -1
 
 
 if __name__ == "__main__":
-    target = "56/8-4=3"
-    guess = naive_guesser(target)
+    # target = "56/8-4=3"
+    import json
+    from multiprocessing import Pool, cpu_count
+    import numpy as np
+
+    with open("train.json", "r") as testing_targets_file:
+        testing_targets = json.load(testing_targets_file)
+
+    guess_counts = []
+
+    batches = np.array_split(testing_targets, 1000)[:4]
+
+    for batch in tqdm(batches):
+        with Pool(cpu_count()) as p:
+            guess_counts.extend(p.map(naive_guesser, batch))
+
+    guess_counts = np.array(guess_counts)
+    print(
+        f"""
+    Average number of guesses: {guess_counts.mean()}
+    Standard deviation of guesses: {guess_counts.std()}
+"""
+    )
