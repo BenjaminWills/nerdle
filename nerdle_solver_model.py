@@ -117,6 +117,8 @@ def get_available_guesses(
 
 def generate_valid_guess_from_available_ones(available_guesses):
     # Run the code until it is valid
+    max_iter = 10_000
+    iter_count = 0
     while True:
         guess = {}
         for character_index, available_characters in available_guesses.items():
@@ -126,6 +128,9 @@ def generate_valid_guess_from_available_ones(available_guesses):
                 random_char = available_characters
             guess[character_index] = str(random_char)
         guess = "".join(dict(sorted(guess.items())).values())
+        iter_count += 1
+        if iter_count == max_iter:
+            return "21+69=90"
         try:
             guess = validate_guess(guess)
             return guess
@@ -163,16 +168,19 @@ if __name__ == "__main__":
 
     guess_counts = []
 
-    batches = np.array_split(testing_targets, 1000)[:4]
+    batches = np.array_split(testing_targets, 1000)[:10]
 
     for batch in tqdm(batches):
         with Pool(cpu_count()) as p:
             guess_counts.extend(p.map(naive_guesser, batch))
 
     guess_counts = np.array(guess_counts)
+
     print(
         f"""
-    Average number of guesses: {guess_counts.mean()}
-    Standard deviation of guesses: {guess_counts.std()}
+    Average number of guesses: {guess_counts[np.where(guess_counts != -1)[0]].mean()}
+    Standard deviation of guesses: {guess_counts[np.where(guess_counts != -1)[0]].std()}
+    Successful guesses: {len(np.where(guess_counts != -1)[0])}
+    Unsucessful guesses: {len(np.where(guess_counts == -1)[0])}
 """
     )
